@@ -460,26 +460,24 @@ async fn auth_middleware(
     .and_then(|h| h.to_str().ok())
     .and_then(|h| h.strip_prefix("Bearer "));
 
-  let token = match auth_header {
-    Some(token) => token,
-    None => return Err(StatusCode::UNAUTHORIZED),
-  };
-
   // Get the stored token
   let settings_manager = crate::settings_manager::SettingsManager::instance();
   let stored_token = match settings_manager.get_api_token(&state.app_handle).await {
     Ok(Some(stored_token)) => stored_token,
-    Ok(None) => return Err(StatusCode::UNAUTHORIZED),
-    Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    _ => {
+      // No token configured - allow all requests (open API mode)
+      return Ok(next.run(request).await);
+    }
   };
 
-  // Compare tokens
-  if token != stored_token {
-    return Err(StatusCode::UNAUTHORIZED);
+  // If token is configured, validate it
+  match auth_header {
+    Some(token) if token == stored_token => {
+      // Token is valid, continue with the request
+      Ok(next.run(request).await)
+    }
+    _ => Err(StatusCode::UNAUTHORIZED),
   }
-
-  // Token is valid, continue with the request
-  Ok(next.run(request).await)
 }
 
 // Global API server instance
