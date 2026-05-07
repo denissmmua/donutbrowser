@@ -1624,13 +1624,6 @@ async fn run_profile(
   State(state): State<ApiServerState>,
   Json(request): Json<RunProfileRequest>,
 ) -> Result<Json<RunProfileResponse>, StatusCode> {
-  if !crate::cloud_auth::CLOUD_AUTH
-    .has_active_paid_subscription()
-    .await
-  {
-    return Err(StatusCode::PAYMENT_REQUIRED);
-  }
-
   let headless = request.headless.unwrap_or(false);
   let url = request.url;
 
@@ -1708,13 +1701,6 @@ async fn open_url_in_profile(
   State(state): State<ApiServerState>,
   Json(request): Json<OpenUrlRequest>,
 ) -> Result<StatusCode, StatusCode> {
-  if !crate::cloud_auth::CLOUD_AUTH
-    .has_active_paid_subscription()
-    .await
-  {
-    return Err(StatusCode::PAYMENT_REQUIRED);
-  }
-
   let browser_runner = crate::browser_runner::BrowserRunner::instance();
 
   browser_runner
